@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deutscher Prospekt Deal Finder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Deutscher Prospekt Deal Finder</h1>
+        <form id="uploadForm">
+            <div>
+                <label for="api_key">AI API Schlüssel:</label>
+                <input type="text" id="api_key" name="api_key" required>
+            </div>
+            <div>
+                <label for="brochure_pdf">Prospekt PDF:</label>
+                <input type="file" id="brochure_pdf" name="brochure_pdf" accept=".pdf" required>
+            </div>
+            <div>
+                <label for="grocery_list">Einkaufsliste (ein Artikel pro Zeile):</label>
+                <textarea id="grocery_list" name="grocery_list" rows="5" required></textarea>
+            </div>
+            <button type="submit">Angebote finden</button>
+        </form>
+
+        <div id="processing-message" style="display:none;">
+            <p>Verarbeite Daten... Bitte warten.</p>
+        </div>
+        
+        <div id="error-display" class="error-message" style="display:none;">
+            {/* Error messages will be shown here */}
+        </div>
+
+        <div id="results-container">
+            <div id="results-summary" class="results-section">
+                {/* Shopping summary will be populated here */}
+            </div>
+            <div id="matched-items-container" class="results-section">
+                {/* Matched items will be populated here */}
+            </div>
+            <div id="unmatched-items-container" class="results-section">
+                {/* Unmatched items will be populated here */}
+            </div>
+            <div id="all-offers-container" class="results-section">
+                {/* All brochure offers will be populated here */}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const processingMessage = document.getElementById('processing-message');
+            const errorDisplay = document.getElementById('error-display');
+            const resultsSummaryDiv = document.getElementById('results-summary');
+            const matchedItemsDiv = document.getElementById('matched-items-container');
+            const unmatchedItemsDiv = document.getElementById('unmatched-items-container');
+            const allOffersDiv = document.getElementById('all-offers-container');
+
+            // Show processing message and clear previous results/errors
+            processingMessage.style.display = 'block';
+            errorDisplay.style.display = 'none';
+            errorDisplay.innerHTML = '';
+            resultsSummaryDiv.innerHTML = '';
+            matchedItemsDiv.innerHTML = '';
+            unmatchedItemsDiv.innerHTML = '';
+            allOffersDiv.innerHTML = '';
+
+            const formData = new FormData();
+            formData.append('brochure_pdf', document.getElementById('brochure_pdf').files[0]);
+            formData.append('grocery_list', document.getElementById('grocery_list').value);
+            formData.append('api_key', document.getElementById('api_key').value);
+
+            try {
+                const response = await fetch('/process_brochure', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                processingMessage.style.display = 'none';
+                const result = await response.json();
+
+                if (result.status && result.status.startsWith('error')) {
+                    displayError(result.message || 'Ein unbekannter Fehler ist aufgetreten.');
+                    if (result.ai_raw_response) {
+                         displayErrorSubInfo(`Rohantwort des Servers: <pre>${escapeHtml(result.ai_raw_response)}</pre>`);
+                    }
+                    if (result.pdf_filename_processed) {
+                        displayErrorSubInfo(`Verarbeitete PDF: ${escapeHtml(result.pdf_filename_processed)}`);
+                    }
+                } else if (result.status && (result.status === 'success' || result.status.startsWith('success_'))) {
+                    populateResults(result);
+                } else { // Fallback for unexpected success or other statuses
+                     if (response.ok) { // HTTP status is OK, but content might be unexpected
+                        populateResults(result); // Try to populate if possible
+                        if (!result.status) { // If no status field, mention it
+                             displayErrorSubInfo("Antwort vom Server erhalten, aber der Status ist unklar. Ergebnisse werden unten angezeigt, falls verfügbar.");
+                        }
+                    } else { // HTTP status indicates an error
+                        displayError(`Fehler vom Server: ${response.status} ${response.statusText}. Antwort: <pre>${escapeHtml(JSON.stringify(result, null, 2))}</pre>`);
+                    }
+                }
+            } catch (error) {
+                processingMessage.style.display = 'none';
+                displayError(`Netzwerkfehler oder Skriptfehler: ${error.toString()}`);
+            }
+        });
+
+        function displayError(message) {
+            const errorDisplay = document.getElementById('error-display');
+            errorDisplay.innerHTML = `<p>${message}</p>`;
+            errorDisplay.style.display = 'block';
+        }
+        function displayErrorSubInfo(message) {
+            const errorDisplay = document.getElementById('error-display');
+            errorDisplay.innerHTML += `<p><small>${message}</small></p>`; // Append as small text
+            errorDisplay.style.display = 'block';
+        }
+
+
+        function populateResults(data) {
+            populateSummary(data.shopping_summary);
+            populateMatchedItems(data.user_shopping_list_matches);
+            populateUnmatchedItems(data.unmatched_user_items);
+            populateAllOffers(data.all_brochure_offers);
+        }
+        
+        function escapeHtml(unsafe) {
+            if (unsafe === null || typeof unsafe === 'undefined') return '';
+            return String(unsafe)
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
+        function formatPrice(price, unit) {
+            let priceStr = "N/A";
+            if (typeof price === 'number') {
+                priceStr = price.toFixed(2).replace('.', ',');
+            } else if (typeof price === 'string' && price.trim() !== "") {
+                 // if already string and formatted, use as is, or re-format if needed
+                 const numPrice = parseFloat(price.replace(',', '.'));
+                 if (!isNaN(numPrice)) priceStr = numPrice.toFixed(2).replace('.', ',');
+                 else priceStr = escapeHtml(price); // fallback to escaped original string
+            }
+            
+            const unitStr = unit ? escapeHtml(unit) : "";
+            return `${priceStr} EUR ${unitStr ? 'pro ' + unitStr : ''}`.trim();
+        }
+        
+        function createOfferListItem(offer, isMatchedItemContext = false, userItemQuery = null) {
+            const li = document.createElement('li');
+            let content = `<strong>${escapeHtml(offer.product_name)}</strong>`;
+            
+            if (isMatchedItemContext && userItemQuery) {
+                content = `<em>Ihr Suchbegriff: ${escapeHtml(userItemQuery)}</em><br/>${content}`;
+            }
+            
+            // Use standardized price if available and makes sense, otherwise fallback
+            let displayPrice = offer.calculated_price_float;
+            let displayUnit = offer.unit;
+            let priceNotes = offer.standardization_notes || "";
+
+            if (offer.standardized_unit_price !== null && offer.comparable_unit) {
+                 // Prefer standardized if it's different or provides a "per standard unit"
+                if (offer.standardized_unit_price !== offer.calculated_price_float || 
+                    offer.comparable_unit.toLowerCase() === 'kg' || 
+                    offer.comparable_unit.toLowerCase() === 'l' ||
+                    offer.comparable_unit.toLowerCase() === 'stück') {
+                    displayPrice = offer.standardized_unit_price;
+                    displayUnit = offer.comparable_unit;
+                } else {
+                    // If standardized is same as calculated and unit is not kg/l/Stück,
+                    // original unit might be more intuitive with calculated_price_float
+                    // e.g. "1.99 per 250g Packung" rather than "1.99 per Packung" if that's what standardized shows.
+                    // This part can be refined based on how standardization_notes are used.
+                    // For now, the above condition handles common cases.
+                }
+            }
+            
+            content += `<br/>Preis: ${formatPrice(displayPrice, displayUnit)}`;
+            
+            if (offer.offer_condition) {
+                content += `<br/>Bedingung: ${escapeHtml(offer.offer_condition)}`;
+            }
+            if (priceNotes) {
+                content += `<br/><small><i>Hinweis: ${escapeHtml(priceNotes)}</i></small>`;
+            }
+            li.innerHTML = content;
+            return li;
+        }
+
+        function populateSummary(summary) {
+            const summaryDiv = document.getElementById('results-summary');
+            if (!summary) {
+                summaryDiv.innerHTML = '<p>Keine Zusammenfassung verfügbar.</p>';
+                return;
+            }
+            summaryDiv.innerHTML = `
+                <h3>Einkaufsübersicht:</h3>
+                <p>Geschätzte Gesamtkosten (gefundene Artikel): ${escapeHtml(summary.total_cost_of_matched_items)} ${escapeHtml(summary.currency)}</p>
+                <p>Anzahl gefundene Artikel: ${summary.number_of_matched_items}</p>
+                <p>Anzahl nicht gefundene Artikel: ${summary.number_of_unmatched_items}</p>
+            `;
+        }
+
+        function populateMatchedItems(items) {
+            const container = document.getElementById('matched-items-container');
+            if (!items || items.length === 0) {
+                container.innerHTML = '<h3>Ihre gefundenen Artikel:</h3><p>Keine Artikel aus Ihrer Liste wurden im Prospekt gefunden.</p>';
+                return;
+            }
+            container.innerHTML = '<h3>Ihre gefundenen Artikel:</h3>';
+            const ul = document.createElement('ul');
+            items.forEach(item => {
+                ul.appendChild(createOfferListItem(item.matched_offer, true, item.user_item));
+            });
+            container.appendChild(ul);
+        }
+
+        function populateUnmatchedItems(items) {
+            const container = document.getElementById('unmatched-items-container');
+            if (!items || items.length === 0) {
+                container.innerHTML = '<h3>Nicht gefundene Artikel:</h3><p>Alle Artikel Ihrer Liste konnten zugeordnet werden oder die Liste war leer.</p>';
+                return;
+            }
+            container.innerHTML = '<h3>Nicht gefundene Artikel:</h3>';
+            const ul = document.createElement('ul');
+            items.forEach(item => {
+                const li = document.createElement('li');
+                let text = escapeHtml(item.user_item);
+                if(item.match_error) {
+                    text += ` <small><i>(Fehler beim Abgleichen: ${escapeHtml(item.match_error)})</i></small>`;
+                }
+                li.innerHTML = text;
+                ul.appendChild(li);
+            });
+            container.appendChild(ul);
+        }
+
+        function populateAllOffers(offers) {
+            const container = document.getElementById('all-offers-container');
+            if (!offers || offers.length === 0) {
+                container.innerHTML = '<h3>Alle Angebote im Prospekt:</h3><p>Keine Angebote konnten aus dem Prospekt extrahiert werden.</p>';
+                return;
+            }
+            container.innerHTML = '<h3>Alle Angebote im Prospekt:</h3>';
+            // Optional: Add a toggle for visibility if list is very long
+            const details = document.createElement('details');
+            const summary = document.createElement('summary');
+            summary.textContent = `Zeige/Verberge alle ${offers.length} Angebote (kann lang sein)`;
+            details.appendChild(summary);
+            
+            const ul = document.createElement('ul');
+            ul.className = 'all-offers-list'; // For potential specific styling (e.g. max-height)
+            offers.forEach(offer => {
+                ul.appendChild(createOfferListItem(offer));
+            });
+            details.appendChild(ul);
+            container.appendChild(details);
+        }
+    </script>
+</body>
+</html>

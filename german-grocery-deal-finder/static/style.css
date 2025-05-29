@@ -1,0 +1,186 @@
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 20px;
+    background-color: #f4f4f4;
+    color: #333;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    width: 100%;
+    max-width: 800px; /* Increased max-width for better layout */
+    margin: 20px;
+    background: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 25px;
+}
+
+form div {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input[type="file"],
+textarea,
+input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 1rem;
+}
+
+textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+button[type="submit"] {
+    background-color: #007bff;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+}
+
+button[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+#processing-message {
+    text-align: center;
+    padding: 15px;
+    background-color: #e7f3fe;
+    border: 1px solid #b3d7ff;
+    border-radius: 4px;
+    margin-top: 20px;
+    color: #004085;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 15px;
+    margin-top: 20px;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+}
+.error-message p {
+    margin: 0;
+}
+.error-message pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: #f1f1f1;
+    padding: 5px;
+    border-radius: 3px;
+}
+
+
+#results-container {
+    margin-top: 30px;
+}
+
+.results-section {
+    background-color: #f9f9f9;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid #eee;
+    border-radius: 5px;
+}
+
+.results-section h3 {
+    margin-top: 0;
+    color: #0056b3;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 5px;
+}
+
+.results-section ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.results-section li {
+    padding: 10px;
+    border-bottom: 1px dashed #ddd;
+    margin-bottom: 8px;
+    background-color: #fff;
+    border-radius: 3px;
+}
+
+.results-section li:last-child {
+    border-bottom: none;
+}
+
+.results-section li strong {
+    color: #333;
+}
+
+.results-section li em { /* For "Ihr Suchbegriff:" */
+    color: #555;
+    font-size: 0.9em;
+}
+
+.results-section li small i { /* For standardization notes */
+    color: #777;
+    display: block; /* Make notes appear on new line */
+    margin-top: 4px;
+}
+
+#all-offers-container details summary {
+    cursor: pointer;
+    font-weight: bold;
+    padding: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+#all-offers-container details[open] summary {
+    background-color: #007bff;
+    color: white;
+}
+
+.all-offers-list {
+    max-height: 400px; /* Limit height for very long lists */
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    background-color: #fff;
+}
+
+/* Small screen adjustments */
+@media (max-width: 600px) {
+    .container {
+        margin: 10px;
+        padding: 15px;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+}

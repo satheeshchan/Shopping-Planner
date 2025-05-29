@@ -1,0 +1,7 @@
+Flask>=2.0
+google-generativeai>=0.3
+python-dotenv # Good for managing API keys locally, though not strictly used by the app itself yet
+gunicorn # For production deployment, good to list early
+PyMuPDF>=1.23.0 # For PDF text extraction
+requests>=2.25.0 # For making HTTP requests in web scraper
+BeautifulSoup4>=4.9.0 # For parsing HTML in web scraper
