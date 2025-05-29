@@ -1,0 +1,24 @@
+# Python virtual environment
+venv/
+*.venv/
+env/
+ENV/
+.env/
+.direnv/
+pip-wheel-metadata/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Uploads folder
+uploads/
+
+# IDE specific
+.vscode/
+.idea/
+
+# OS specific
+.DS_Store
+Thumbs.db
